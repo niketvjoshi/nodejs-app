@@ -29,19 +29,29 @@ pipeline {
       """
     }
   }
+
   environment {
-    AWS_REGION        = 'ap-south-1'
-    AWS_ACCOUNT_ID    = '196549506578'
-    ECR_REPO          = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/nodejs-app"
-    IMAGE_TAG         = "${BUILD_NUMBER}-${GIT_COMMIT[0..6]}"
-    MANIFESTS_REPO    = 'https://github.com/YOUR_ORG/nodejs-app-manifests.git'
+    AWS_REGION      = 'ap-south-1'
+    AWS_ACCOUNT_ID  = '196549506578'
+    ECR_REPO        = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/nodejs-app"
+    // Short commit hash for cleaner tagging
+    IMAGE_TAG       = "${BUILD_NUMBER}-${GIT_COMMIT[0..6]}"
   }
 
   stages {
+    stage('Install Tools') {
+      steps {
+        container('tools') {
+          sh """
+            apk add --no-cache docker-cli aws-cli
+          """
+        }
+      }
+    }
 
     stage('Build Docker Image') {
       steps {
-        container('docker') {
+        container('tools') {
           sh """
             docker build -t ${ECR_REPO}:${IMAGE_TAG} .
             docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_REPO}:latest
@@ -52,7 +62,7 @@ pipeline {
 
     stage('Push to ECR') {
       steps {
-        container('docker') {
+        container('tools') {
           sh """
             aws ecr get-login-password --region ${AWS_REGION} | \
               docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
@@ -67,29 +77,29 @@ pipeline {
     stage('Update Manifests Repo') {
       steps {
         container('tools') {
+          // Ensure 'github-credentials' matches the ID you created in Jenkins
           withCredentials([usernamePassword(
-            credentialsId: 'github-credentials',
+            credentialsId: 'github-credentials', 
             usernameVariable: 'GIT_USER',
             passwordVariable: 'GIT_TOKEN'
           )]) {
             sh """
-              git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/YOUR_ORG/nodejs-app-manifests.git
+              git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/niketvjoshi/nodejs-app-manifests.git
               cd nodejs-app-manifests
 
               # Update the image tag in rollout.yaml
-              sed -i 's|image: ${ECR_REPO}:.*|image: ${ECR_REPO}:${IMAGE_TAG}|' k8s/rollout.yaml
+              sed -i "s|image: ${ECR_REPO}:.*|image: ${ECR_REPO}:${IMAGE_TAG}|" k8s/rollout.yaml
 
               git config user.email "jenkins@ci.local"
               git config user.name "Jenkins"
               git add k8s/rollout.yaml
               git commit -m "ci: update image to ${IMAGE_TAG} [skip ci]"
-              git push
+              git push origin main
             """
           }
         }
       }
     }
-
   }
 
   post {
