@@ -88,7 +88,7 @@ pipeline {
       steps {
         container('tools') {
           withCredentials([usernamePassword(
-            credentialsId: 'github-credentials', 
+            credentialsId: 'github-token-niket', 
             usernameVariable: 'GIT_USER',
             passwordVariable: 'GIT_TOKEN'
           )]) {
