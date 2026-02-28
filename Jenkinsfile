@@ -8,7 +8,7 @@ pipeline {
           serviceAccountName: jenkins
           containers:
           - name: docker
-            image: docker:24-dind
+            image: docker:29-dind
             securityContext:
               privileged: true
             env:
