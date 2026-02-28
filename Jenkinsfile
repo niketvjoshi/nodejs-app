@@ -11,20 +11,24 @@ pipeline {
             image: docker:24-dind
             securityContext:
               privileged: true
+            env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
             volumeMounts:
-            - name: docker-sock
-              mountPath: /var/run/docker.sock
+            - name: docker-graph-storage
+              mountPath: /var/lib/docker
           - name: tools
             image: alpine/git:latest
             command: ['sleep', 'infinity']
+            env:
+            - name: DOCKER_HOST
+              value: tcp://localhost:2375
           volumes:
-          - name: docker-sock
-            hostPath:
-              path: /var/run/docker.sock
+          - name: docker-graph-storage
+            emptyDir: {}
       """
     }
   }
-
   environment {
     AWS_REGION        = 'ap-south-1'
     AWS_ACCOUNT_ID    = '196549506578'
