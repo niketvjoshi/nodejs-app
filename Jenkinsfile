@@ -96,11 +96,11 @@ pipeline {
               git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/niketvjoshi/nodejs-app-manifests.git
               cd nodejs-app-manifests
 
-              sed -i "s|image: ${ECR_REPO}:.*|image: ${ECR_REPO}:${IMAGE_TAG}|" k8s/rollout.yaml
+              sed -i "s|image: ${ECR_REPO}:.*|image: ${ECR_REPO}:${IMAGE_TAG}|" rollout.yaml
 
               git config user.email "jenkins@ci.local"
               git config user.name "Jenkins"
-              git add k8s/rollout.yaml
+              git add rollout.yaml
               git commit -m "ci: update image to ${IMAGE_TAG} [skip ci]"
               git push origin main
             """
